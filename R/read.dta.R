@@ -15,8 +15,13 @@
 
 read.dta <- function(file, convert.dates = TRUE,
                      convert.factors = TRUE, missing.type = FALSE,
-                     convert.underscore = FALSE, warn.missing.labels = TRUE)
+                     convert.underscore = FALSE, warn.missing.labels = TRUE,
+                     duplicated.value.labels = c("append", "condense"),
+                     duplicated.value.labels.infix = "_duplicated_")
 {
+
+    duplicated.value.labels <- match.arg(duplicated.value.labels)
+  
     if(length(grep("^(http|ftp|https)://", file))) {
         tmp <- tempfile()
         download.file(file, tmp, quiet = TRUE, mode = "wb")
@@ -110,8 +115,36 @@ read.dta <- function(file, convert.dates = TRUE,
                     if (!all(rval[[v]] %in% c(NA, NaN, tt[[ll[v]]])))
                         next
                 }
-                rval[[v]] <- factor(rval[[v]], levels=tt[[ll[v]]],
-                                    labels=names(tt[[ll[v]]]))
+
+                newrval <- rval[[v]]
+                newlevels <- labels
+                newlabels <- names(labels)
+                dupnewlabels <- duplicated(newlabels)
+                ## duplicated factor labels are no longer possible for R >= 3.4.0,
+                ## hence adding two ways around
+                ## - append: appends infix plus original level (that is unique)
+                ## - condense: removes additional levels with identical labels and 
+                ##   condenses to the first of all duplicated levels
+                if(any(dupnewlabels)) {
+                  warning("Duplicated levels in factor ", ll[v], ": ", 
+                          paste(newlabels[dupnewlabels], collapse=", "))
+                  if(duplicated.value.labels == "append"){
+                    newlabels[dupnewlabels] <- 
+                      paste(newlabels[dupnewlabels], newlevels[dupnewlabels], 
+                            sep = duplicated.value.labels.infix)
+                  }
+                  if(duplicated.value.labels == "condense"){
+                    for(d in unique(newlabels[dupnewlabels])){
+                      dups <- newlabels %in% d
+                      newrval[newrval %in% newlevels[dups]] <- newlevels[dups][1]
+                    }
+                    newlabels <- newlabels[!dupnewlabels]
+                    newlevels <- newlevels[!dupnewlabels]
+                  }
+                }
+                rval[[v]] <- factor(newrval,
+                                    levels = newlevels,
+                                    labels = newlabels)
             }
         }
     }

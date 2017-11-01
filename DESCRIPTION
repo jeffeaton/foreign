@@ -1,6 +1,6 @@
 Package: foreign
 Priority: recommended
-Version: 0.8-69
+Version: 0.8-69.9001
 Date: 2017-06-21
 Title: Read Data Stored by 'Minitab', 'S', 'SAS', 'SPSS', 'Stata',
         'Systat', 'Weka', 'dBase', ...
